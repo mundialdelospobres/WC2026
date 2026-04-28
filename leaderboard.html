@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Brackets – Copa 2026</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+  background:#0b0f1a;
+  color:white;
+  -webkit-font-smoothing:antialiased;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+h1{
+  text-align:center;
+  padding:20px 16px 10px;
+  font-size:20px;
+  color:#ffd700;
+}
+.toolbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:8px 16px 14px;
+}
+.count{font-size:13px;color:#8899bb;}
+.refreshBtn{
+  background:#1f6feb;
+  border:none;
+  color:white;
+  font-size:13px;
+  font-weight:600;
+  padding:7px 14px;
+  border-radius:8px;
+  cursor:pointer;
+  touch-action:manipulation;
+}
+.refreshBtn:active{opacity:.7}
+#list{padding:0 12px 20px;}
+
+/* Summary card */
+.card{
+  background:#161b2a;
+  border-radius:12px;
+  margin-bottom:10px;
+  overflow:hidden;
+}
+.cardHeader{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:12px 14px;
+  cursor:pointer;
+  touch-action:manipulation;
+  -webkit-user-select:none;
+}
+.cardHeader:active{background:#1e2540}
+.playerName{font-size:16px;font-weight:700;}
+.cardDate{font-size:11px;color:#556;margin-top:2px;}
+.chevron{font-size:12px;color:#556;transition:transform .2s;}
+.chevron.open{transform:rotate(90deg);}
+.podium{
+  display:flex;
+  gap:8px;
+  padding:0 14px 12px;
+  flex-wrap:wrap;
+}
+.podiumItem{
+  font-size:12px;
+  background:#0f1422;
+  border-radius:6px;
+  padding:4px 8px;
+  display:flex;
+  align-items:center;
+  gap:4px;
+}
+.podiumItem img{width:14px;}
+.gold{color:#ffd700}
+.silver{color:#c0c0c0}
+.bronze{color:#cd7f32}
+
+/* Detail panel */
+.detail{display:none;padding:0 14px 14px;border-top:1px solid #1e2540;}
+.detail.open{display:block;}
+.detailSection{margin-top:12px;}
+.detailSection h3{
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  color:#8899bb;
+  margin-bottom:6px;
+}
+/* Groups grid */
+.groupsGrid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:5px;
+}
+.groupBox{
+  background:#0f1422;
+  border-radius:6px;
+  padding:5px 6px;
+  font-size:10px;
+}
+.groupBox b{display:block;color:#8899bb;margin-bottom:3px;font-size:10px;}
+.groupBox div{
+  display:flex;align-items:center;gap:3px;
+  padding:1px 0;
+}
+.groupBox img{width:11px;}
+
+/* Third place */
+.thirdGrid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:4px;
+}
+.thirdEntry{
+  background:#0f1422;
+  border-radius:6px;
+  padding:4px 5px;
+  font-size:10px;
+  display:flex;align-items:center;gap:3px;
+}
+.thirdEntry img{width:11px;}
+.thirdRank{
+  font-size:9px;font-weight:700;
+  color:#ffd700;
+  margin-right:2px;
+}
+
+/* Knockout table */
+.knockoutTable{width:100%;border-collapse:collapse;font-size:10px;}
+.knockoutTable th{
+  color:#8899bb;
+  font-weight:600;
+  text-align:left;
+  padding:3px 4px;
+  border-bottom:1px solid #1e2540;
+}
+.knockoutTable td{
+  padding:3px 4px;
+  border-bottom:1px solid #0f1422;
+  display:flex;align-items:center;gap:3px;
+}
+.knockoutTable td img{width:11px;}
+.knockoutTable tr td:first-child{font-weight:600;color:#556;font-size:9px;}
+
+.empty{text-align:center;color:#556;padding:40px;font-size:14px;}
+.spinner{text-align:center;padding:40px;font-size:22px;animation:spin 1s linear infinite;display:inline-block;}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<h1>⚽ Brackets – Copa 2026</h1>
+
+<div class="toolbar">
+  <span class="count" id="count">Cargando…</span>
+  <button class="refreshBtn" onclick="load()">Actualizar</button>
+</div>
+
+<div id="list"><div style="text-align:center;padding:40px"><span class="spinner">⏳</span></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE=supabase.createClient(
+  'https://esdpcaqkaocgtxwffpxu.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVzZHBjYXFrYW9jZ3R4d2ZmcHh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczMzc1NDUsImV4cCI6MjA5MjkxMzU0NX0.ElIbNFMhH6gqS1QJtjfrjqQcWU9YQc4hGY0TjM7FipY'
+);
+
+const flags={
+  Czechia:"cz","South Korea":"kr",Mexico:"mx","South Africa":"za",Switzerland:"ch",Canada:"ca","Bosnia and Herzegovina":"ba",Qatar:"qa",Brazil:"br",Morocco:"ma","Scotland":"gb",Haiti:"ht","United States":"us",Turkey:"tr",Paraguay:"py",Australia:"au",Germany:"de",Ecuador:"ec","Ivory Coast":"ci","Curaçao":"cw",Netherlands:"nl",Japan:"jp",Sweden:"se",Tunisia:"tn",Belgium:"be",Egypt:"eg",Iran:"ir","New Zealand":"nz",Spain:"es",Uruguay:"uy","Saudi Arabia":"sa","Cape Verde":"cv",France:"fr",Norway:"no",Senegal:"sn",Iraq:"iq",Argentina:"ar",Austria:"at",Algeria:"dz",Jordan:"jo",Portugal:"pt",Colombia:"co","Congo DR":"cd",Uzbekistan:"uz",England:"gb",Croatia:"hr",Ghana:"gh",Panama:"pa"
+};
+const es={
+  "Czechia":"Rep. Checa","South Korea":"Corea del Sur","Mexico":"México","South Africa":"Sudáfrica","Switzerland":"Suiza","Canada":"Canadá","Bosnia and Herzegovina":"Bosnia y Herz.","Qatar":"Catar","Brazil":"Brasil","Morocco":"Marruecos","Scotland":"Escocia","Haiti":"Haití","United States":"Estados Unidos","Turkey":"Turquía","Paraguay":"Paraguay","Australia":"Australia","Germany":"Alemania","Ecuador":"Ecuador","Ivory Coast":"Costa de Marfil","Curaçao":"Curazao","Netherlands":"Países Bajos","Japan":"Japón","Sweden":"Suecia","Tunisia":"Túnez","Belgium":"Bélgica","Egypt":"Egipto","Iran":"Irán","New Zealand":"Nueva Zelanda","Spain":"España","Uruguay":"Uruguay","Saudi Arabia":"Arabia Saudita","Cape Verde":"Cabo Verde","France":"Francia","Norway":"Noruega","Senegal":"Senegal","Iraq":"Irak","Argentina":"Argentina","Austria":"Austria","Algeria":"Argelia","Jordan":"Jordania","Portugal":"Portugal","Colombia":"Colombia","Congo DR":"Congo RD","Uzbekistan":"Uzbekistán","England":"Inglaterra","Croatia":"Croacia","Ghana":"Ghana","Panama":"Panamá"
+};
+const ordinals=["1°","2°","3°","4°","5°","6°","7°","8°"];
+
+function flag(n){
+  if(!n||!flags[n]) return '';
+  return `<img src="https://flagcdn.com/w40/${flags[n]}.png">`;
+}
+function name(n){ return es[n]||n||''; }
+function team(n){ return n ? `${flag(n)}${name(n)}` : '<span style="color:#556">TBD</span>'; }
+
+async function load(){
+  document.getElementById('count').textContent='Cargando…';
+  const {data,error}=await SUPABASE
+    .from('brackets')
+    .select('*')
+    .order('created_at',{ascending:false});
+
+  if(error){
+    document.getElementById('list').innerHTML=`<div class="empty">Error al cargar: ${error.message}</div>`;
+    return;
+  }
+  if(!data.length){
+    document.getElementById('list').innerHTML=`<div class="empty">No hay brackets todavía.</div>`;
+    document.getElementById('count').textContent='0 brackets';
+    return;
+  }
+
+  document.getElementById('count').textContent=`${data.length} bracket${data.length!==1?'s':''}`;
+  document.getElementById('list').innerHTML='';
+  data.forEach(row=>document.getElementById('list').appendChild(buildCard(row)));
+}
+
+function buildCard(row){
+  const p=row.picks||{};
+  const rounds=p.rounds||[];
+  const finalMatch=rounds[4]?.[0];
+  const champion=finalMatch?.winner||null;
+  const runnerup=finalMatch ? (finalMatch.teams[0]===champion?finalMatch.teams[1]:finalMatch.teams[0]) : null;
+  const third=p.thirdPlaceMatch?.winner||null;
+  const date=new Date(row.created_at).toLocaleDateString('es-MX',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+
+  const card=document.createElement('div');
+  card.className='card';
+
+  // Header
+  const header=document.createElement('div');
+  header.className='cardHeader';
+  header.innerHTML=`
+    <div>
+      <div class="playerName">${row.name}</div>
+      <div class="cardDate">${date}</div>
+    </div>
+    <span class="chevron">›</span>`;
+  card.appendChild(header);
+
+  // Podium summary
+  const podium=document.createElement('div');
+  podium.className='podium';
+  if(champion) podium.innerHTML+=`<div class="podiumItem gold">1° ${flag(champion)}${name(champion)}</div>`;
+  if(runnerup) podium.innerHTML+=`<div class="podiumItem silver">2° ${flag(runnerup)}${name(runnerup)}</div>`;
+  if(third)    podium.innerHTML+=`<div class="podiumItem bronze">3° ${flag(third)}${name(third)}</div>`;
+  if(!champion) podium.innerHTML=`<div style="font-size:12px;color:#556;padding-bottom:4px">Bracket incompleto</div>`;
+  card.appendChild(podium);
+
+  // Detail panel (hidden by default)
+  const detail=document.createElement('div');
+  detail.className='detail';
+
+  // Groups
+  if(p.groups && Object.keys(p.groups).length){
+    const sec=document.createElement('div');
+    sec.className='detailSection';
+    sec.innerHTML='<h3>Grupos</h3>';
+    const grid=document.createElement('div');
+    grid.className='groupsGrid';
+    Object.entries(p.groups).forEach(([g,arr])=>{
+      const box=document.createElement('div');
+      box.className='groupBox';
+      box.innerHTML=`<b>Grupo ${g}</b>`+
+        arr.map((t,i)=>`<div><span style="color:#556;font-size:9px">${i+1}°</span> ${flag(t)}${name(t)}</div>`).join('');
+      grid.appendChild(box);
+    });
+    sec.appendChild(grid);
+    detail.appendChild(sec);
+  }
+
+  // Third place ranking
+  if(p.selectedThird?.length){
+    const sec=document.createElement('div');
+    sec.className='detailSection';
+    sec.innerHTML='<h3>3os Lugares</h3>';
+    const grid=document.createElement('div');
+    grid.className='thirdGrid';
+    p.selectedThird.forEach((t,i)=>{
+      const el=document.createElement('div');
+      el.className='thirdEntry';
+      el.innerHTML=`<span class="thirdRank">${ordinals[i]}</span>${flag(t.team)}${name(t.team)}`;
+      grid.appendChild(el);
+    });
+    sec.appendChild(grid);
+    detail.appendChild(sec);
+  }
+
+  // Knockout results
+  const roundLabels=["R32","R16","Cuartos","Semis","Final"];
+  const hasKnockout=rounds.some(r=>r.some(m=>m.winner));
+  if(hasKnockout){
+    const sec=document.createElement('div');
+    sec.className='detailSection';
+    sec.innerHTML='<h3>Eliminatoria</h3>';
+    const tbl=document.createElement('table');
+    tbl.className='knockoutTable';
+    tbl.innerHTML='<tr><th>Ronda</th><th>Ganadores</th></tr>';
+    rounds.forEach((r,ri)=>{
+      const winners=r.filter(m=>m.winner).map(m=>m.winner);
+      if(!winners.length) return;
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td style="vertical-align:top;padding-top:5px">${roundLabels[ri]}</td>`;
+      const td=document.createElement('td');
+      td.style.cssText='display:flex;flex-wrap:wrap;gap:4px;';
+      winners.forEach(w=>{
+        const span=document.createElement('span');
+        span.style.cssText='display:flex;align-items:center;gap:2px;background:#0f1422;padding:2px 5px;border-radius:4px;';
+        span.innerHTML=`${flag(w)}${name(w)}`;
+        td.appendChild(span);
+      });
+      tr.appendChild(td);
+      tbl.appendChild(tr);
+    });
+    // 3rd place match winner
+    if(p.thirdPlaceMatch?.winner){
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td style="vertical-align:top;padding-top:5px">3er lugar</td>`;
+      const td=document.createElement('td');
+      td.style.cssText='display:flex;align-items:center;gap:2px;';
+      td.innerHTML=`${flag(p.thirdPlaceMatch.winner)}${name(p.thirdPlaceMatch.winner)}`;
+      tr.appendChild(td);
+      tbl.appendChild(tr);
+    }
+    sec.appendChild(tbl);
+    detail.appendChild(sec);
+  }
+
+  card.appendChild(detail);
+
+  // Toggle expand
+  header.addEventListener('click',()=>{
+    const open=detail.classList.toggle('open');
+    header.querySelector('.chevron').classList.toggle('open',open);
+  });
+
+  return card;
+}
+
+load();
+</script>
+</body>
+</html>
